@@ -1,7 +1,7 @@
 package main
 
-import "github.com/fengxxc/wechatmp2markdown/parse"
+import "github.com/fengxxc/wechatmp2markdown/test"
 
 func main() {
-	parse.Test()
+	test.Test1()
 }
