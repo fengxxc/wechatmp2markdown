@@ -2,10 +2,10 @@ package parse
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"regexp"
 	"strconv"
@@ -15,9 +15,6 @@ import (
 )
 
 func parseSection(s *goquery.Selection) Paragraph {
-	// fmt.Printf("s.Length() = %d\n", s.Length())
-	// fmt.Printf("s.Size() = %d\n", s.Size())
-	// var piece = make([]Token, s.Size())
 	var piece []Piece
 	s.Children().Each(func(i int, s *goquery.Selection) {
 		var p Piece
@@ -40,9 +37,7 @@ func parseSection(s *goquery.Selection) Paragraph {
 			p = Piece{NORMAL_TEXT, s.Text(), nil}
 			// TODO
 		}
-		// fmt.Printf("i = %d\n", i)
 		// fmt.Printf("%+v\n", t)
-		// tokens[i] = t
 		piece = append(piece, p)
 	})
 	return Paragraph{piece}
@@ -64,7 +59,6 @@ func parseHeader(s *goquery.Selection) Paragraph {
 	case s.Is("h6"):
 		level = 6
 	}
-	fmt.Println("***********" + strconv.Itoa(level))
 	attr := map[string]string{"level": strconv.Itoa(level)}
 	p := Piece{HEADER, removeBrAndBlank(s.Text()), attr}
 	return Paragraph{[]Piece{p}}
@@ -89,20 +83,17 @@ func ParseFromReader(r io.Reader) Article {
 
 	// 标题
 	title := mainContent.Find("#activity-name").Text()
-	fmt.Println(title)
 	attr := map[string]string{"level": "1"}
-	article.Title = Piece{HEADER, title, attr}
+	article.Title = Piece{HEADER, removeBrAndBlank(title), attr}
 
 	// meta 细节待完善
 	meta := mainContent.Find("#meta_content").Text()
 	meta = removeBrAndBlank(meta)
-	fmt.Println(meta)
 	article.Meta = meta
 
 	// tags 细节待完善
 	tags := mainContent.Find("#js_tags").Text()
 	tags = removeBrAndBlank(tags)
-	fmt.Println(tags)
 	article.Tags = tags
 
 	// content
@@ -112,8 +103,6 @@ func ParseFromReader(r io.Reader) Article {
 	content := mainContent.Find("#js_content")
 	var sections []Paragraph
 	content.Children().Each(func(i int, s *goquery.Selection) {
-		fmt.Println(s.Text())
-		// fmt.Println(s.Attr("style"))
 		var paragraph Paragraph
 		if s.Is("pre") || s.Is("section.code-snippet__fix") {
 			// 代码块
@@ -150,6 +139,18 @@ func ParseFromHTMLFile(filepath string) Article {
 		panic(err)
 	}
 	return ParseFromReader(bytes.NewReader(content))
+}
+
+func ParseFromURL(url string) Article {
+	res, err := http.Get(url)
+	if err != nil {
+		panic(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != 200 {
+		log.Fatalf("get from url %s error: %d %s", url, res.StatusCode, res.Status)
+	}
+	return ParseFromReader(res.Body)
 }
 
 func removeBrAndBlank(s string) string {
