@@ -8,37 +8,75 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 )
 
-func parseSection(s *goquery.Selection) Block {
+func parseSection(s *goquery.Selection) Paragraph {
 	// fmt.Printf("s.Length() = %d\n", s.Length())
 	// fmt.Printf("s.Size() = %d\n", s.Size())
-	// var tokens = make([]Token, s.Size())
-	var tokens []Token
+	// var piece = make([]Token, s.Size())
+	var piece []Piece
 	s.Children().Each(func(i int, s *goquery.Selection) {
-		var t Token
+		var p Piece
 		attr := make(map[string]string)
 		if s.Is("span") {
-			t = Token{NORMAL_TEXT, s.Text(), nil}
+			p = Piece{NORMAL_TEXT, s.Text(), nil}
 		} else if s.Is("a") {
 			attr["href"], _ = s.Attr("href")
-			t = Token{LINK, removeBrAndBlank(s.Text()), attr}
+			p = Piece{LINK, removeBrAndBlank(s.Text()), attr}
 		} else if s.Is("img") {
 			attr["src"], _ = s.Attr("src")
-			t = Token{IMAGE, "", attr}
+			attr["alt"], _ = s.Attr("alt")
+			attr["title"], _ = s.Attr("title")
+			p = Piece{IMAGE, "", attr}
+		} else if s.Is("ol") {
+			// TODO
+		} else if s.Is("ul") {
+			// TODO
 		} else {
-			t = Token{NORMAL_TEXT, s.Text(), nil}
+			p = Piece{NORMAL_TEXT, s.Text(), nil}
 			// TODO
 		}
 		// fmt.Printf("i = %d\n", i)
 		// fmt.Printf("%+v\n", t)
 		// tokens[i] = t
-		tokens = append(tokens, t)
+		piece = append(piece, p)
 	})
-	return Block{tokens}
+	return Paragraph{piece}
+}
+
+func parseHeader(s *goquery.Selection) Paragraph {
+	var level int
+	switch {
+	case s.Is("h1"):
+		level = 1
+	case s.Is("h2"):
+		level = 2
+	case s.Is("h3"):
+		level = 3
+	case s.Is("h4"):
+		level = 4
+	case s.Is("h5"):
+		level = 5
+	case s.Is("h6"):
+		level = 6
+	}
+	fmt.Println("***********" + strconv.Itoa(level))
+	attr := map[string]string{"level": strconv.Itoa(level)}
+	p := Piece{HEADER, removeBrAndBlank(s.Text()), attr}
+	return Paragraph{[]Piece{p}}
+}
+
+func parsePre(s *goquery.Selection) Paragraph {
+	var codeRows []string
+	s.Find("code").Each(func(i int, s *goquery.Selection) {
+		codeRows = append(codeRows, s.Text())
+	})
+	p := Piece{CODE_BLOCK, codeRows, nil}
+	return Paragraph{[]Piece{p}}
 }
 
 func ParseFromReader(r io.Reader) Article {
@@ -52,41 +90,47 @@ func ParseFromReader(r io.Reader) Article {
 	// 标题
 	title := mainContent.Find("#activity-name").Text()
 	fmt.Println(title)
-	article.title = title
+	attr := map[string]string{"level": "1"}
+	article.Title = Piece{HEADER, title, attr}
 
 	// meta 细节待完善
 	meta := mainContent.Find("#meta_content").Text()
 	meta = removeBrAndBlank(meta)
 	fmt.Println(meta)
-	article.meta = meta
+	article.Meta = meta
 
 	// tags 细节待完善
 	tags := mainContent.Find("#js_tags").Text()
 	tags = removeBrAndBlank(tags)
 	fmt.Println(tags)
-	article.tags = tags
+	article.Tags = tags
 
 	// content
 	// section[style="line-height: 1.5em;"]>span,a	=> 一般段落（含文本和超链接）
 	// p[style="line-height: 1.5em;"]				=> 项目列表（有序/无序）
 	// section[style=".*text-align:center"]>img		=> 居中段落（图片）
 	content := mainContent.Find("#js_content")
-	var sections []Block
-	content.Find("section,p").Each(func(i int, s *goquery.Selection) {
+	var sections []Paragraph
+	content.Children().Each(func(i int, s *goquery.Selection) {
 		fmt.Println(s.Text())
 		// fmt.Println(s.Attr("style"))
-		var block Block
-		if s.Is("p") {
-			block = parseSection(s)
-		} else if s.Is("section") {
-			block = parseSection(s)
-		} else {
+		var paragraph Paragraph
+		if s.Is("pre") || s.Is("section.code-snippet__fix") {
+			// 代码块
+			paragraph = parsePre(s)
+		} else if s.Is("p") || s.Is("section") {
+			paragraph = parseSection(s)
+		} else if s.Is("h1") || s.Is("h2") || s.Is("h3") || s.Is("h4") || s.Is("h5") || s.Is("h6") {
+			paragraph = parseHeader(s)
+		} else if s.Is("ol") {
+			// TODO
+		} else if s.Is("ul") {
 			// TODO
 		}
 		// sections[i] = block
-		sections = append(sections, block)
+		sections = append(sections, paragraph)
 	})
-	article.content = sections
+	article.Content = sections
 
 	return article
 }
