@@ -25,7 +25,7 @@ func parseSection(s *goquery.Selection) Paragraph {
 			attr["href"], _ = s.Attr("href")
 			p = Piece{LINK, removeBrAndBlank(s.Text()), attr}
 		} else if s.Is("img") {
-			attr["src"], _ = s.Attr("src")
+			attr["src"], _ = s.Attr("data-src")
 			attr["alt"], _ = s.Attr("alt")
 			attr["title"], _ = s.Attr("title")
 			p = Piece{IMAGE, "", attr}
