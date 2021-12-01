@@ -16,32 +16,30 @@ import (
 
 func parseSection(s *goquery.Selection) []Piece {
 	var piece []Piece
-	s.Children().Each(func(i int, s *goquery.Selection) {
-		var p []Piece
+	s.Children().Each(func(i int, sc *goquery.Selection) {
 		attr := make(map[string]string)
-		if s.Is("span") {
+		if sc.Is("span") {
 			// p = Piece{NORMAL_TEXT, s.Text(), nil}
-			p = append(p, Piece{NORMAL_TEXT, s.Text(), nil})
-		} else if s.Is("a") {
-			attr["href"], _ = s.Attr("href")
+			piece = append(piece, Piece{NORMAL_TEXT, sc.Text(), nil})
+		} else if sc.Is("a") {
+			attr["href"], _ = sc.Attr("href")
 			// p = Piece{LINK, removeBrAndBlank(s.Text()), attr}
-			p = append(p, Piece{LINK, removeBrAndBlank(s.Text()), attr})
-		} else if s.Is("img") {
-			attr["src"], _ = s.Attr("data-src")
-			attr["alt"], _ = s.Attr("alt")
-			attr["title"], _ = s.Attr("title")
+			piece = append(piece, Piece{LINK, removeBrAndBlank(sc.Text()), attr})
+		} else if sc.Is("img") {
+			attr["src"], _ = sc.Attr("data-src")
+			attr["alt"], _ = sc.Attr("alt")
+			attr["title"], _ = sc.Attr("title")
 			// p = Piece{IMAGE, "", attr}
-			p = append(p, Piece{IMAGE, "", attr})
-		} else if s.Is("ol") {
-			p = append(p, parseOl(s)...)
-		} else if s.Is("ul") {
-			p = append(p, parseUl(s)...)
-		} else if s.Is("section") {
-			p = append(p, parseSection(s)...)
+			piece = append(piece, Piece{IMAGE, "", attr})
+		} else if sc.Is("ol") {
+			piece = append(piece, parseList(sc, O_LIST)...)
+		} else if sc.Is("ul") {
+			piece = append(piece, parseList(sc, U_LIST)...)
+		} else if sc.Is("section") {
+			piece = append(piece, parseSection(sc)...)
 		} else {
-			p = append(p, Piece{NORMAL_TEXT, s.Text(), nil})
+			piece = append(piece, Piece{NORMAL_TEXT, sc.Text(), nil})
 		}
-		piece = append(piece, p...)
 	})
 	return piece
 }
@@ -69,33 +67,25 @@ func parseHeader(s *goquery.Selection) []Piece {
 
 func parsePre(s *goquery.Selection) []Piece {
 	var codeRows []string
-	s.Find("code").Each(func(i int, s *goquery.Selection) {
-		codeRows = append(codeRows, s.Text())
+	s.Find("code").Each(func(i int, sc *goquery.Selection) {
+		codeRows = append(codeRows, sc.Text())
 	})
 	p := Piece{CODE_BLOCK, codeRows, nil}
 	return []Piece{p}
 }
 
-func parseUl(s *goquery.Selection) []Piece {
+func parseList(s *goquery.Selection, ptype PieceType) []Piece {
 	var list []Piece
-	s.Find("li").Each(func(i int, s *goquery.Selection) {
-		list = append(list, Piece{U_LIST, parseSection(s), nil})
-	})
-	return list
-}
-
-func parseOl(s *goquery.Selection) []Piece {
-	var list []Piece
-	s.Find("li").Each(func(i int, s *goquery.Selection) {
-		list = append(list, Piece{O_LIST, parseSection(s), nil})
+	s.Find("li").Each(func(i int, sc *goquery.Selection) {
+		list = append(list, Piece{ptype, parseSection(sc), nil})
 	})
 	return list
 }
 
 func parseBlockQuote(s *goquery.Selection) []Piece {
 	var bq []Piece
-	s.Children().Each(func(i int, s *goquery.Selection) {
-		bq = append(bq, Piece{BLOCK_QUOTES, parseSection(s), nil})
+	s.Children().Each(func(i int, sc *goquery.Selection) {
+		bq = append(bq, Piece{BLOCK_QUOTES, parseSection(sc), nil})
 	})
 	return bq
 }
@@ -140,9 +130,9 @@ func ParseFromReader(r io.Reader) Article {
 		} else if s.Is("h1") || s.Is("h2") || s.Is("h3") || s.Is("h4") || s.Is("h5") || s.Is("h6") {
 			pieces = append(pieces, parseHeader(s)...)
 		} else if s.Is("ol") {
-			pieces = append(pieces, parseOl(s)...)
+			pieces = append(pieces, parseList(s, O_LIST)...)
 		} else if s.Is("ul") {
-			pieces = append(pieces, parseUl(s)...)
+			pieces = append(pieces, parseList(s, U_LIST)...)
 		} else if s.Is("blockquote") {
 			pieces = append(pieces, parseBlockQuote(s)...)
 		}

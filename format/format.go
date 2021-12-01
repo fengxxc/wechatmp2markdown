@@ -58,6 +58,7 @@ func formatContent(pieces []parse.Piece, depth int) string {
 		case parse.TABLE:
 			// TODO
 		case parse.CODE_INLINE:
+			// TODO
 		case parse.CODE_BLOCK:
 			pieceMdStr = formatCodeBlock(piece)
 		case parse.BLOCK_QUOTES:
@@ -67,6 +68,7 @@ func formatContent(pieces []parse.Piece, depth int) string {
 		case parse.U_LIST:
 			pieceMdStr = formatList(piece, depth)
 		case parse.HR:
+			// TODO
 		case parse.BR:
 			pieceMdStr = "  \n"
 		}
