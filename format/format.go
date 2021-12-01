@@ -61,6 +61,7 @@ func formatContent(pieces []parse.Piece, depth int) string {
 		case parse.CODE_BLOCK:
 			pieceMdStr = formatCodeBlock(piece)
 		case parse.BLOCK_QUOTES:
+			pieceMdStr = formatBlockQuote(piece, depth)
 		case parse.O_LIST:
 			pieceMdStr = formatList(piece, depth)
 		case parse.U_LIST:
@@ -74,6 +75,17 @@ func formatContent(pieces []parse.Piece, depth int) string {
 	return contentMdStr
 }
 
+func formatBlockQuote(piece parse.Piece, depth int) string {
+	var bqMdString string
+	var prefix string = ">"
+	for i := 0; i < depth; i++ {
+		prefix += ">"
+	}
+	prefix += " "
+	bqMdString = prefix + formatContent(piece.Val.([]parse.Piece), depth+1) + "  \n"
+	return bqMdString
+}
+
 func formatList(li parse.Piece, depth int) string {
 	var listMdString string
 	var prefix string
@@ -85,7 +97,7 @@ func formatList(li parse.Piece, depth int) string {
 	} else if li.Type == parse.O_LIST {
 		prefix += strconv.Itoa(1) + ". " // 写死成1也大丈夫，markdown会自动累加序号
 	}
-	listMdString += prefix + formatContent(li.Val.([]parse.Piece), depth+1) + "  \n"
+	listMdString = prefix + formatContent(li.Val.([]parse.Piece), depth+1) + "  \n"
 	return listMdString
 }
 

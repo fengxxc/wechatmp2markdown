@@ -39,10 +39,8 @@ func parseSection(s *goquery.Selection) []Piece {
 		} else if s.Is("section") {
 			p = append(p, parseSection(s)...)
 		} else {
-			// p = Piece{NORMAL_TEXT, s.Text(), nil}
-			// TODO
+			p = append(p, Piece{NORMAL_TEXT, s.Text(), nil})
 		}
-		// fmt.Printf("%+v\n", t)
 		piece = append(piece, p...)
 	})
 	return piece
@@ -81,8 +79,7 @@ func parsePre(s *goquery.Selection) []Piece {
 func parseUl(s *goquery.Selection) []Piece {
 	var list []Piece
 	s.Find("li").Each(func(i int, s *goquery.Selection) {
-		li := Piece{U_LIST, parseSection(s), nil}
-		list = append(list, li)
+		list = append(list, Piece{U_LIST, parseSection(s), nil})
 	})
 	return list
 }
@@ -90,10 +87,17 @@ func parseUl(s *goquery.Selection) []Piece {
 func parseOl(s *goquery.Selection) []Piece {
 	var list []Piece
 	s.Find("li").Each(func(i int, s *goquery.Selection) {
-		li := Piece{O_LIST, parseSection(s), nil}
-		list = append(list, li)
+		list = append(list, Piece{O_LIST, parseSection(s), nil})
 	})
 	return list
+}
+
+func parseBlockQuote(s *goquery.Selection) []Piece {
+	var bq []Piece
+	s.Children().Each(func(i int, s *goquery.Selection) {
+		bq = append(bq, Piece{BLOCK_QUOTES, parseSection(s), nil})
+	})
+	return bq
 }
 
 func ParseFromReader(r io.Reader) Article {
@@ -139,6 +143,8 @@ func ParseFromReader(r io.Reader) Article {
 			pieces = append(pieces, parseOl(s)...)
 		} else if s.Is("ul") {
 			pieces = append(pieces, parseUl(s)...)
+		} else if s.Is("blockquote") {
+			pieces = append(pieces, parseBlockQuote(s)...)
 		}
 		// sections = append(sections, paragraph)
 		pieces = append(pieces, Piece{BR, nil, nil})
