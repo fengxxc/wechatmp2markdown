@@ -36,39 +36,38 @@ func formatTags(tags string) string {
 	return tags + "  \n" // TODO
 }
 
-func formatContent(blocks []parse.Paragraph) string {
+func formatContent(pieces []parse.Piece) string {
 	var contentMdStr string
-	for _, block := range blocks {
-		for _, piece := range block.Pieces {
-			var pieceMdStr string
-			switch piece.Type {
-			case parse.HEADER:
-				pieceMdStr = formatTitle(piece)
-			case parse.LINK:
-				pieceMdStr = formatLink(piece)
-			case parse.NORMAL_TEXT:
-				pieceMdStr = piece.Val.(string)
-			case parse.BOLD_TEXT:
-				pieceMdStr = "**" + piece.Val.(string) + "**"
-			case parse.ITALIC_TEXT:
-				pieceMdStr = "*" + piece.Val.(string) + "*"
-			case parse.BOLD_ITALIC_TEXT:
-				pieceMdStr = "***" + piece.Val.(string) + "***"
-			case parse.IMAGE:
-				pieceMdStr = formatImage(piece)
-			case parse.TABLE:
-				// TODO
-			case parse.CODE_INLINE:
-			case parse.CODE_BLOCK:
-				pieceMdStr = formatCodeBlock(piece)
-			case parse.BLOCK_QUOTES:
-			case parse.O_LIST:
-			case parse.U_LIST:
-			case parse.HR:
-			}
-			contentMdStr += pieceMdStr
+	for _, piece := range pieces {
+		var pieceMdStr string
+		switch piece.Type {
+		case parse.HEADER:
+			pieceMdStr = formatTitle(piece)
+		case parse.LINK:
+			pieceMdStr = formatLink(piece)
+		case parse.NORMAL_TEXT:
+			pieceMdStr = piece.Val.(string)
+		case parse.BOLD_TEXT:
+			pieceMdStr = "**" + piece.Val.(string) + "**"
+		case parse.ITALIC_TEXT:
+			pieceMdStr = "*" + piece.Val.(string) + "*"
+		case parse.BOLD_ITALIC_TEXT:
+			pieceMdStr = "***" + piece.Val.(string) + "***"
+		case parse.IMAGE:
+			pieceMdStr = formatImage(piece)
+		case parse.TABLE:
+			// TODO
+		case parse.CODE_INLINE:
+		case parse.CODE_BLOCK:
+			pieceMdStr = formatCodeBlock(piece)
+		case parse.BLOCK_QUOTES:
+		case parse.O_LIST:
+		case parse.U_LIST:
+		case parse.HR:
+		case parse.BR:
+			pieceMdStr = "  \n"
 		}
-		contentMdStr += "  \n"
+		contentMdStr += pieceMdStr
 	}
 	return contentMdStr
 }

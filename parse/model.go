@@ -4,16 +4,12 @@ type Article struct {
 	Title   Piece
 	Meta    string
 	Tags    string
-	Content []Paragraph
+	Content []Piece
 }
 
 type Header struct {
 	Level int
 	Text  string
-}
-
-type Paragraph struct {
-	Pieces []Piece
 }
 
 // go不资瓷泛型可真是难受...
@@ -42,4 +38,5 @@ const (
 	O_LIST                            // 有序列表
 	U_LIST                            // 无序列表
 	HR                                // 分隔线
+	BR                                // 换行
 )

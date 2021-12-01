@@ -14,7 +14,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-func parseSection(s *goquery.Selection) Paragraph {
+func parseSection(s *goquery.Selection) []Piece {
 	var piece []Piece
 	s.Children().Each(func(i int, s *goquery.Selection) {
 		var p Piece
@@ -40,10 +40,10 @@ func parseSection(s *goquery.Selection) Paragraph {
 		// fmt.Printf("%+v\n", t)
 		piece = append(piece, p)
 	})
-	return Paragraph{piece}
+	return piece
 }
 
-func parseHeader(s *goquery.Selection) Paragraph {
+func parseHeader(s *goquery.Selection) []Piece {
 	var level int
 	switch {
 	case s.Is("h1"):
@@ -61,16 +61,16 @@ func parseHeader(s *goquery.Selection) Paragraph {
 	}
 	attr := map[string]string{"level": strconv.Itoa(level)}
 	p := Piece{HEADER, removeBrAndBlank(s.Text()), attr}
-	return Paragraph{[]Piece{p}}
+	return []Piece{p}
 }
 
-func parsePre(s *goquery.Selection) Paragraph {
+func parsePre(s *goquery.Selection) []Piece {
 	var codeRows []string
 	s.Find("code").Each(func(i int, s *goquery.Selection) {
 		codeRows = append(codeRows, s.Text())
 	})
 	p := Piece{CODE_BLOCK, codeRows, nil}
-	return Paragraph{[]Piece{p}}
+	return []Piece{p}
 }
 
 func ParseFromReader(r io.Reader) Article {
@@ -101,25 +101,30 @@ func ParseFromReader(r io.Reader) Article {
 	// p[style="line-height: 1.5em;"]				=> 项目列表（有序/无序）
 	// section[style=".*text-align:center"]>img		=> 居中段落（图片）
 	content := mainContent.Find("#js_content")
-	var sections []Paragraph
+	// var sections []Paragraph
+	var pieces []Piece
 	content.Children().Each(func(i int, s *goquery.Selection) {
-		var paragraph Paragraph
+		// var paragraph Paragraph
 		if s.Is("pre") || s.Is("section.code-snippet__fix") {
 			// 代码块
-			paragraph = parsePre(s)
+			// paragraph = parsePre(s)
+			pieces = append(pieces, parsePre(s)...)
 		} else if s.Is("p") || s.Is("section") {
-			paragraph = parseSection(s)
+			// paragraph = parseSection(s)
+			pieces = append(pieces, parseSection(s)...)
 		} else if s.Is("h1") || s.Is("h2") || s.Is("h3") || s.Is("h4") || s.Is("h5") || s.Is("h6") {
-			paragraph = parseHeader(s)
+			// paragraph = parseHeader(s)
+			pieces = append(pieces, parseHeader(s)...)
 		} else if s.Is("ol") {
 			// TODO
 		} else if s.Is("ul") {
 			// TODO
 		}
-		// sections[i] = block
-		sections = append(sections, paragraph)
+		// sections = append(sections, paragraph)
+		pieces = append(pieces, Piece{BR, nil, nil})
 	})
-	article.Content = sections
+	// article.Content = sections
+	article.Content = pieces
 
 	return article
 }
