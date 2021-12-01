@@ -17,28 +17,33 @@ import (
 func parseSection(s *goquery.Selection) []Piece {
 	var piece []Piece
 	s.Children().Each(func(i int, s *goquery.Selection) {
-		var p Piece
+		var p []Piece
 		attr := make(map[string]string)
 		if s.Is("span") {
-			p = Piece{NORMAL_TEXT, s.Text(), nil}
+			// p = Piece{NORMAL_TEXT, s.Text(), nil}
+			p = append(p, Piece{NORMAL_TEXT, s.Text(), nil})
 		} else if s.Is("a") {
 			attr["href"], _ = s.Attr("href")
-			p = Piece{LINK, removeBrAndBlank(s.Text()), attr}
+			// p = Piece{LINK, removeBrAndBlank(s.Text()), attr}
+			p = append(p, Piece{LINK, removeBrAndBlank(s.Text()), attr})
 		} else if s.Is("img") {
 			attr["src"], _ = s.Attr("data-src")
 			attr["alt"], _ = s.Attr("alt")
 			attr["title"], _ = s.Attr("title")
-			p = Piece{IMAGE, "", attr}
+			// p = Piece{IMAGE, "", attr}
+			p = append(p, Piece{IMAGE, "", attr})
 		} else if s.Is("ol") {
-			// TODO
+			p = append(p, parseOl(s)...)
 		} else if s.Is("ul") {
-			// TODO
+			p = append(p, parseUl(s)...)
+		} else if s.Is("section") {
+			p = append(p, parseSection(s)...)
 		} else {
-			p = Piece{NORMAL_TEXT, s.Text(), nil}
+			// p = Piece{NORMAL_TEXT, s.Text(), nil}
 			// TODO
 		}
 		// fmt.Printf("%+v\n", t)
-		piece = append(piece, p)
+		piece = append(piece, p...)
 	})
 	return piece
 }
@@ -71,6 +76,24 @@ func parsePre(s *goquery.Selection) []Piece {
 	})
 	p := Piece{CODE_BLOCK, codeRows, nil}
 	return []Piece{p}
+}
+
+func parseUl(s *goquery.Selection) []Piece {
+	var list []Piece
+	s.Find("li").Each(func(i int, s *goquery.Selection) {
+		li := Piece{U_LIST, parseSection(s), nil}
+		list = append(list, li)
+	})
+	return list
+}
+
+func parseOl(s *goquery.Selection) []Piece {
+	var list []Piece
+	s.Find("li").Each(func(i int, s *goquery.Selection) {
+		li := Piece{O_LIST, parseSection(s), nil}
+		list = append(list, li)
+	})
+	return list
 }
 
 func ParseFromReader(r io.Reader) Article {
@@ -107,18 +130,15 @@ func ParseFromReader(r io.Reader) Article {
 		// var paragraph Paragraph
 		if s.Is("pre") || s.Is("section.code-snippet__fix") {
 			// 代码块
-			// paragraph = parsePre(s)
 			pieces = append(pieces, parsePre(s)...)
 		} else if s.Is("p") || s.Is("section") {
-			// paragraph = parseSection(s)
 			pieces = append(pieces, parseSection(s)...)
 		} else if s.Is("h1") || s.Is("h2") || s.Is("h3") || s.Is("h4") || s.Is("h5") || s.Is("h6") {
-			// paragraph = parseHeader(s)
 			pieces = append(pieces, parseHeader(s)...)
 		} else if s.Is("ol") {
-			// TODO
+			pieces = append(pieces, parseOl(s)...)
 		} else if s.Is("ul") {
-			// TODO
+			pieces = append(pieces, parseUl(s)...)
 		}
 		// sections = append(sections, paragraph)
 		pieces = append(pieces, Piece{BR, nil, nil})

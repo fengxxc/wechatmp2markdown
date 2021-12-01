@@ -14,7 +14,7 @@ func Format(article parse.Article) string {
 	result += metaMdStr
 	var tagsMdStr string = formatTags(article.Tags)
 	result += tagsMdStr
-	var content string = formatContent(article.Content)
+	var content string = formatContent(article.Content, 0)
 	result += content
 	return result
 }
@@ -36,7 +36,7 @@ func formatTags(tags string) string {
 	return tags + "  \n" // TODO
 }
 
-func formatContent(pieces []parse.Piece) string {
+func formatContent(pieces []parse.Piece, depth int) string {
 	var contentMdStr string
 	for _, piece := range pieces {
 		var pieceMdStr string
@@ -62,7 +62,9 @@ func formatContent(pieces []parse.Piece) string {
 			pieceMdStr = formatCodeBlock(piece)
 		case parse.BLOCK_QUOTES:
 		case parse.O_LIST:
+			pieceMdStr = formatList(piece, depth)
 		case parse.U_LIST:
+			pieceMdStr = formatList(piece, depth)
 		case parse.HR:
 		case parse.BR:
 			pieceMdStr = "  \n"
@@ -70,6 +72,21 @@ func formatContent(pieces []parse.Piece) string {
 		contentMdStr += pieceMdStr
 	}
 	return contentMdStr
+}
+
+func formatList(li parse.Piece, depth int) string {
+	var listMdString string
+	var prefix string
+	for j := 0; j < depth; j++ {
+		prefix += "    "
+	}
+	if li.Type == parse.U_LIST {
+		prefix += "- "
+	} else if li.Type == parse.O_LIST {
+		prefix += strconv.Itoa(1) + ". " // 写死成1也大丈夫，markdown会自动累加序号
+	}
+	listMdString += prefix + formatContent(li.Val.([]parse.Piece), depth+1) + "  \n"
+	return listMdString
 }
 
 func formatCodeBlock(piece parse.Piece) string {
