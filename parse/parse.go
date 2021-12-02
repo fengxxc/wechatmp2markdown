@@ -15,33 +15,38 @@ import (
 )
 
 func parseSection(s *goquery.Selection) []Piece {
-	var piece []Piece
-	s.Children().Each(func(i int, sc *goquery.Selection) {
+	var pieces []Piece
+	s.Contents().Each(func(i int, sc *goquery.Selection) {
 		attr := make(map[string]string)
 		if sc.Is("span") {
-			// p = Piece{NORMAL_TEXT, s.Text(), nil}
-			piece = append(piece, Piece{NORMAL_TEXT, sc.Text(), nil})
+			pieces = append(pieces, Piece{NORMAL_TEXT, sc.Text(), nil})
 		} else if sc.Is("a") {
 			attr["href"], _ = sc.Attr("href")
-			// p = Piece{LINK, removeBrAndBlank(s.Text()), attr}
-			piece = append(piece, Piece{LINK, removeBrAndBlank(sc.Text()), attr})
+			pieces = append(pieces, Piece{LINK, removeBrAndBlank(sc.Text()), attr})
 		} else if sc.Is("img") {
 			attr["src"], _ = sc.Attr("data-src")
 			attr["alt"], _ = sc.Attr("alt")
 			attr["title"], _ = sc.Attr("title")
-			// p = Piece{IMAGE, "", attr}
-			piece = append(piece, Piece{IMAGE, "", attr})
+			pieces = append(pieces, Piece{IMAGE, "", attr}, Piece{BR, nil, nil})
 		} else if sc.Is("ol") {
-			piece = append(piece, parseList(sc, O_LIST)...)
+			pieces = append(pieces, parseList(sc, O_LIST)...)
 		} else if sc.Is("ul") {
-			piece = append(piece, parseList(sc, U_LIST)...)
-		} else if sc.Is("section") {
-			piece = append(piece, parseSection(sc)...)
+			pieces = append(pieces, parseList(sc, U_LIST)...)
+		} else if sc.Is("pre") || sc.Is("section.code-snippet__fix") {
+			// 代码块
+			pieces = append(pieces, parsePre(sc)...)
+		} else if sc.Is("p") || sc.Is("section") {
+			pieces = append(pieces, parseSection(sc)...)
+		} else if sc.Is("h1") || sc.Is("h2") || sc.Is("h3") || sc.Is("h4") || sc.Is("h5") || sc.Is("h6") {
+			pieces = append(pieces, parseHeader(sc)...)
+		} else if sc.Is("blockquote") {
+			pieces = append(pieces, parseBlockQuote(sc)...)
 		} else {
-			piece = append(piece, Piece{NORMAL_TEXT, sc.Text(), nil})
+			pieces = append(pieces, Piece{NORMAL_TEXT, sc.Text(), nil})
 		}
 	})
-	return piece
+	pieces = append(pieces, Piece{BR, nil, nil})
+	return pieces
 }
 
 func parseHeader(s *goquery.Selection) []Piece {
@@ -62,7 +67,7 @@ func parseHeader(s *goquery.Selection) []Piece {
 	}
 	attr := map[string]string{"level": strconv.Itoa(level)}
 	p := Piece{HEADER, removeBrAndBlank(s.Text()), attr}
-	return []Piece{p}
+	return []Piece{p, {BR, nil, nil}}
 }
 
 func parsePre(s *goquery.Selection) []Piece {
@@ -71,7 +76,7 @@ func parsePre(s *goquery.Selection) []Piece {
 		codeRows = append(codeRows, sc.Text())
 	})
 	p := Piece{CODE_BLOCK, codeRows, nil}
-	return []Piece{p}
+	return []Piece{p, {BR, nil, nil}}
 }
 
 func parseList(s *goquery.Selection, ptype PieceType) []Piece {
@@ -79,14 +84,16 @@ func parseList(s *goquery.Selection, ptype PieceType) []Piece {
 	s.Find("li").Each(func(i int, sc *goquery.Selection) {
 		list = append(list, Piece{ptype, parseSection(sc), nil})
 	})
+	list = append(list, Piece{BR, nil, nil})
 	return list
 }
 
 func parseBlockQuote(s *goquery.Selection) []Piece {
 	var bq []Piece
-	s.Children().Each(func(i int, sc *goquery.Selection) {
+	s.Contents().Each(func(i int, sc *goquery.Selection) {
 		bq = append(bq, Piece{BLOCK_QUOTES, parseSection(sc), nil})
 	})
+	bq = append(bq, Piece{BR, nil, nil})
 	return bq
 }
 
@@ -118,28 +125,7 @@ func ParseFromReader(r io.Reader) Article {
 	// p[style="line-height: 1.5em;"]				=> 项目列表（有序/无序）
 	// section[style=".*text-align:center"]>img		=> 居中段落（图片）
 	content := mainContent.Find("#js_content")
-	// var sections []Paragraph
-	var pieces []Piece
-	content.Children().Each(func(i int, s *goquery.Selection) {
-		// var paragraph Paragraph
-		if s.Is("pre") || s.Is("section.code-snippet__fix") {
-			// 代码块
-			pieces = append(pieces, parsePre(s)...)
-		} else if s.Is("p") || s.Is("section") {
-			pieces = append(pieces, parseSection(s)...)
-		} else if s.Is("h1") || s.Is("h2") || s.Is("h3") || s.Is("h4") || s.Is("h5") || s.Is("h6") {
-			pieces = append(pieces, parseHeader(s)...)
-		} else if s.Is("ol") {
-			pieces = append(pieces, parseList(s, O_LIST)...)
-		} else if s.Is("ul") {
-			pieces = append(pieces, parseList(s, U_LIST)...)
-		} else if s.Is("blockquote") {
-			pieces = append(pieces, parseBlockQuote(s)...)
-		}
-		// sections = append(sections, paragraph)
-		pieces = append(pieces, Piece{BR, nil, nil})
-	})
-	// article.Content = sections
+	pieces := parseSection(content)
 	article.Content = pieces
 
 	return article
