@@ -13,7 +13,7 @@ build-win32: clean
 	${BUILD_ENV} GOOS=windows GOARCH=386 go build -ldflags "-s -w" -o build/${APP}_win32.exe main.go
 
 
-# windows环境编译 需安装mingw32-make 
+# windows环境编译 需gcc，推荐安装tdm64-gcc
 # mingw32-make [cmd]
 win-build-linux: clean
 	go env -w ${BUILD_ENV}
