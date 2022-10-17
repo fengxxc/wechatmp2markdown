@@ -24,7 +24,7 @@ win-build-osx: clean
 	go env -w ${BUILD_ENV}
 	go env -w GOOS=darwin
 	go env -w GOARCH=amd64
-	go build -ldflags "-s -w" -o build/${APP}_linux_amd64 main.go
+	go build -ldflags "-s -w" -o build/${APP}_osx_amd64 main.go
 win-build-win64: clean
 	go env -w ${BUILD_ENV}
 	go env -w GOOS=windows
