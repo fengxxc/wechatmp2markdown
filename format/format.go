@@ -3,6 +3,7 @@ package format
 import (
 	"io/ioutil"
 	"strconv"
+	"strings"
 
 	"github.com/fengxxc/wechatmp2markdown/parse"
 )
@@ -20,9 +21,9 @@ func Format(article parse.Article) string {
 	return result
 }
 
-func FormatAndSave(article parse.Article, filePath string) {
+func FormatAndSave(article parse.Article, filePath string) error {
 	var result string = Format(article)
-	ioutil.WriteFile(filePath, []byte(result), 0644)
+	return ioutil.WriteFile(filePath, []byte(result), 0644)
 }
 
 func formatTitle(piece parse.Piece) string {
@@ -34,8 +35,8 @@ func formatTitle(piece parse.Piece) string {
 	return prefix + " " + piece.Val.(string) + "  \n"
 }
 
-func formatMeta(meta string) string {
-	return meta + "  \n" // TODO
+func formatMeta(meta []string) string {
+	return strings.Join(meta, " ") + "  \n" // TODO
 }
 
 func formatTags(tags string) string {

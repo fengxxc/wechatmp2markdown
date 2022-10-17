@@ -2,6 +2,7 @@ package parse
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -97,6 +98,22 @@ func parseBlockQuote(s *goquery.Selection) []Piece {
 	return bq
 }
 
+func parseMeta(s *goquery.Selection) []string {
+	var res []string
+	s.Children().Each(func(i int, sc *goquery.Selection) {
+		if sc.Is("#profileBt") {
+			res = append(res, removeBrAndBlank(sc.Find("#js_name").Text()))
+		} else {
+			// t := sc.Text()
+			t := sc.Nodes[0].Data
+			// t, _ := sc.Html()
+			fmt.Println(t)
+			res = append(res, t)
+		}
+	})
+	return res
+}
+
 func ParseFromReader(r io.Reader) Article {
 	var article Article
 	doc, err := goquery.NewDocumentFromReader(r)
@@ -111,9 +128,9 @@ func ParseFromReader(r io.Reader) Article {
 	article.Title = Piece{HEADER, removeBrAndBlank(title), attr}
 
 	// meta 细节待完善
-	meta := mainContent.Find("#meta_content").Text()
-	meta = removeBrAndBlank(meta)
-	article.Meta = meta
+	meta := mainContent.Find("#meta_content")
+	metastring := parseMeta(meta)
+	article.Meta = metastring
 
 	// tags 细节待完善
 	tags := mainContent.Find("#js_tags").Text()

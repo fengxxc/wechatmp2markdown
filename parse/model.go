@@ -2,7 +2,7 @@ package parse
 
 type Article struct {
 	Title   Piece
-	Meta    string
+	Meta    []string
 	Tags    string
 	Content []Piece
 }
@@ -24,19 +24,19 @@ type Piece struct {
 type PieceType int32
 
 const (
-	HEADER           PieceType = iota // 标题
-	LINK                              // 链接
-	NORMAL_TEXT                       // 文字
-	BOLD_TEXT                         // 粗体文字
-	ITALIC_TEXT                       // 斜体文字
-	BOLD_ITALIC_TEXT                  // 粗斜体
-	IMAGE                             // 图片
-	TABLE                             // 表格
-	CODE_INLINE                       // 代码 内联
-	CODE_BLOCK                        // 代码 块
-	BLOCK_QUOTES                      // 引用
-	O_LIST                            // 有序列表
-	U_LIST                            // 无序列表
-	HR                                // 分隔线
-	BR                                // 换行
+	HEADER           PieceType = iota // 0  标题
+	LINK                              // 1  链接
+	NORMAL_TEXT                       // 2  文字
+	BOLD_TEXT                         // 3  粗体文字
+	ITALIC_TEXT                       // 4  斜体文字
+	BOLD_ITALIC_TEXT                  // 5  粗斜体
+	IMAGE                             // 6  图片
+	TABLE                             // 7  表格
+	CODE_INLINE                       // 8  代码 内联
+	CODE_BLOCK                        // 9  代码 块
+	BLOCK_QUOTES                      // 10 引用
+	O_LIST                            // 11 有序列表
+	U_LIST                            // 12 无序列表
+	HR                                // 13 分隔线
+	BR                                // 14 换行
 )
