@@ -2,7 +2,6 @@ package parse
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -19,9 +18,7 @@ func parseSection(s *goquery.Selection) []Piece {
 	var pieces []Piece
 	s.Contents().Each(func(i int, sc *goquery.Selection) {
 		attr := make(map[string]string)
-		if sc.Is("span") {
-			pieces = append(pieces, Piece{NORMAL_TEXT, sc.Text(), nil})
-		} else if sc.Is("a") {
+		if sc.Is("a") {
 			attr["href"], _ = sc.Attr("href")
 			pieces = append(pieces, Piece{LINK, removeBrAndBlank(sc.Text()), attr})
 		} else if sc.Is("img") {
@@ -36,12 +33,14 @@ func parseSection(s *goquery.Selection) []Piece {
 		} else if sc.Is("pre") || sc.Is("section.code-snippet__fix") {
 			// 代码块
 			pieces = append(pieces, parsePre(sc)...)
-		} else if sc.Is("p") || sc.Is("section") {
+		} else if sc.Is("p") || sc.Is("section") || sc.Is("span") {
 			pieces = append(pieces, parseSection(sc)...)
 		} else if sc.Is("h1") || sc.Is("h2") || sc.Is("h3") || sc.Is("h4") || sc.Is("h5") || sc.Is("h6") {
 			pieces = append(pieces, parseHeader(sc)...)
 		} else if sc.Is("blockquote") {
 			pieces = append(pieces, parseBlockQuote(sc)...)
+		} else if sc.Is("strong") {
+			pieces = append(pieces, parseStrong(sc)...)
 		} else {
 			pieces = append(pieces, Piece{NORMAL_TEXT, sc.Text(), nil})
 		}
@@ -98,6 +97,12 @@ func parseBlockQuote(s *goquery.Selection) []Piece {
 	return bq
 }
 
+func parseStrong(s *goquery.Selection) []Piece {
+	var bt []Piece
+	bt = append(bt, Piece{BOLD_TEXT, strings.TrimSpace(s.Text()), nil})
+	return bt
+}
+
 func parseMeta(s *goquery.Selection) []string {
 	var res []string
 	s.Children().Each(func(i int, sc *goquery.Selection) {
@@ -107,7 +112,6 @@ func parseMeta(s *goquery.Selection) []string {
 			// t := sc.Text()
 			t := sc.Nodes[0].Data
 			// t, _ := sc.Html()
-			fmt.Println(t)
 			res = append(res, t)
 		}
 	})
