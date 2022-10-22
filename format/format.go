@@ -122,7 +122,8 @@ func formatCodeBlock(piece parse.Piece) string {
 }
 
 func formatImage(piece parse.Piece) string {
-	return "![" + piece.Attrs["alt"] + "](" + piece.Attrs["src"] + " \"" + piece.Attrs["title"] + "\")"
+	// return "![" + piece.Attrs["alt"] + "](" + piece.Attrs["src"] + " \"" + piece.Attrs["title"] + "\")"
+	return "![" + piece.Attrs["alt"] + "](data:image/png;base64," + piece.Val.(string) + ")"
 }
 
 func formatLink(piece parse.Piece) string {

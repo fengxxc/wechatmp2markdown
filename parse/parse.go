@@ -2,6 +2,7 @@ package parse
 
 import (
 	"bytes"
+	"encoding/base64"
 	"io"
 	"io/ioutil"
 	"log"
@@ -25,7 +26,8 @@ func parseSection(s *goquery.Selection) []Piece {
 			attr["src"], _ = sc.Attr("data-src")
 			attr["alt"], _ = sc.Attr("alt")
 			attr["title"], _ = sc.Attr("title")
-			pieces = append(pieces, Piece{IMAGE, "", attr}, Piece{BR, nil, nil})
+			base64Image := img2base64(fetchImgFile(attr["src"]))
+			pieces = append(pieces, Piece{IMAGE, base64Image, attr}, Piece{BR, nil, nil})
 		} else if sc.Is("ol") {
 			pieces = append(pieces, parseList(sc, O_LIST)...)
 		} else if sc.Is("ul") {
@@ -192,4 +194,25 @@ func removeBrAndBlank(s string) string {
 		spc_index = reg.FindStringIndex(string(sb))            //继续在字符串中搜索
 	}
 	return strings.Replace(string(sb), "\n", " ", -1)
+}
+
+func fetchImgFile(url string) []byte {
+	res, err := http.Get(url)
+	if err != nil {
+		log.Fatalf("get Image from url %s error: %s", url, err.Error())
+		return nil
+	}
+	defer res.Body.Close()
+	if res.StatusCode != 200 {
+		log.Fatalf("get Image from url %s error: %d %s", url, res.StatusCode, res.Status)
+	}
+	content, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Fatalf("read image Response error: %s", err.Error())
+	}
+	return content
+}
+
+func img2base64(content []byte) string {
+	return base64.StdEncoding.EncodeToString(content)
 }
