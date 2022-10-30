@@ -11,12 +11,14 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 )
 
 func parseSection(s *goquery.Selection) []Piece {
 	var pieces []Piece
+	pieces = append(pieces, Piece{BR, nil, nil})
 	s.Contents().Each(func(i int, sc *goquery.Selection) {
 		attr := make(map[string]string)
 		if sc.Is("a") {
@@ -111,10 +113,12 @@ func parseMeta(s *goquery.Selection) []string {
 		if sc.Is("#profileBt") {
 			res = append(res, removeBrAndBlank(sc.Find("#js_name").Text()))
 		} else {
-			// t := sc.Text()
-			t := sc.Nodes[0].Data
-			// t, _ := sc.Html()
-			res = append(res, t)
+			style, exists := sc.Attr("style")
+			if !(exists && strings.Contains(style, "display: none;")) {
+				// t := sc.Nodes[0].Data
+				t := strings.TrimSpace(sc.Text())
+				res = append(res, t)
+			}
 		}
 	})
 	return res
@@ -133,10 +137,20 @@ func ParseFromReader(r io.Reader) Article {
 	attr := map[string]string{"level": "1"}
 	article.Title = Piece{HEADER, removeBrAndBlank(title), attr}
 
-	// meta 细节待完善
+	// meta
 	meta := mainContent.Find("#meta_content")
 	metastring := parseMeta(meta)
 	article.Meta = metastring
+	// 从js中找到发布时间
+	re, _ := regexp.Compile("var ct = \"([0-9]+)\"")
+	findstrs := re.FindStringSubmatch(doc.Find("script").Text())
+	if findstrs != nil && len(findstrs) > 1 {
+		var createTime string = findstrs[1]
+		timestamp, _ := strconv.Atoi(createTime)
+		time := time.Unix(int64(timestamp), 0)
+		// fmt.Println(time)
+		article.Meta = append(article.Meta, time.Format("2006-01-02 15:04"))
+	}
 
 	// tags 细节待完善
 	tags := mainContent.Find("#js_tags").Text()
