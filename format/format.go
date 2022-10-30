@@ -8,6 +8,7 @@ import (
 	"github.com/fengxxc/wechatmp2markdown/parse"
 )
 
+// Format format article
 func Format(article parse.Article) string {
 	var result string
 	var titleMdStr string = formatTitle(article.Title)
@@ -21,6 +22,7 @@ func Format(article parse.Article) string {
 	return result
 }
 
+// FormatAndSave fomat article and save to local file
 func FormatAndSave(article parse.Article, filePath string) error {
 	var result string = Format(article)
 	return ioutil.WriteFile(filePath, []byte(result), 0644)
@@ -45,6 +47,7 @@ func formatTags(tags string) string {
 
 func formatContent(pieces []parse.Piece, depth int) string {
 	var contentMdStr string
+	var base64Imgs []string
 	for _, piece := range pieces {
 		var pieceMdStr string
 		switch piece.Type {
@@ -61,7 +64,8 @@ func formatContent(pieces []parse.Piece, depth int) string {
 		case parse.BOLD_ITALIC_TEXT:
 			pieceMdStr = "***" + piece.Val.(string) + "***"
 		case parse.IMAGE:
-			pieceMdStr = formatImage(piece)
+			pieceMdStr = formatImageRefer(piece, len(base64Imgs))
+			base64Imgs = append(base64Imgs, piece.Val.(string))
 		case parse.TABLE:
 			// TODO
 		case parse.CODE_INLINE:
@@ -80,6 +84,9 @@ func formatContent(pieces []parse.Piece, depth int) string {
 			pieceMdStr = "  \n"
 		}
 		contentMdStr += pieceMdStr
+	}
+	for i := 0; i < len(base64Imgs); i++ {
+		contentMdStr += "\n[" + strconv.Itoa(i) + "]:" + "data:image/png;base64," + base64Imgs[i]
 	}
 	return contentMdStr
 }
@@ -121,9 +128,13 @@ func formatCodeBlock(piece parse.Piece) string {
 	return codeMdStr
 }
 
-func formatImage(piece parse.Piece) string {
+func formatImageInline(piece parse.Piece, index int) string {
 	// return "![" + piece.Attrs["alt"] + "](" + piece.Attrs["src"] + " \"" + piece.Attrs["title"] + "\")"
 	return "![" + piece.Attrs["alt"] + "](data:image/png;base64," + piece.Val.(string) + ")"
+}
+
+func formatImageRefer(piece parse.Piece, index int) string {
+	return "![" + piece.Attrs["alt"] + "][" + strconv.Itoa(index) + "]"
 }
 
 func formatLink(piece parse.Piece) string {
