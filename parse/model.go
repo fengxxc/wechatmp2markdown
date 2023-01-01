@@ -31,12 +31,13 @@ const (
 	ITALIC_TEXT                       // 4  斜体文字
 	BOLD_ITALIC_TEXT                  // 5  粗斜体
 	IMAGE                             // 6  图片
-	TABLE                             // 7  表格
-	CODE_INLINE                       // 8  代码 内联
-	CODE_BLOCK                        // 9  代码 块
-	BLOCK_QUOTES                      // 10 引用
-	O_LIST                            // 11 有序列表
-	U_LIST                            // 12 无序列表
-	HR                                // 13 分隔线
-	BR                                // 14 换行
+	IMAGE_BASE64                      // 7  图片 base64
+	TABLE                             // 8  表格
+	CODE_INLINE                       // 9  代码 内联
+	CODE_BLOCK                        // 10  代码 块
+	BLOCK_QUOTES                      // 11 引用
+	O_LIST                            // 12 有序列表
+	U_LIST                            // 13 无序列表
+	HR                                // 14 分隔线
+	BR                                // 15 换行
 )

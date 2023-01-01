@@ -1,15 +1,22 @@
 package format
 
 import (
+	"bytes"
+	"encoding/binary"
 	"io/ioutil"
+	"log"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 
 	"github.com/fengxxc/wechatmp2markdown/parse"
+	"github.com/fengxxc/wechatmp2markdown/util"
 )
 
 // Format format article
-func Format(article parse.Article) string {
+func Format(article parse.Article) (string, map[string][]byte) {
 	var result string
 	var titleMdStr string = formatTitle(article.Title)
 	result += titleMdStr
@@ -17,15 +24,72 @@ func Format(article parse.Article) string {
 	result += metaMdStr
 	var tagsMdStr string = formatTags(article.Tags)
 	result += tagsMdStr
-	var content string = formatContent(article.Content, 0)
+	var saveImageBytes map[string][]byte
+	content, saveImageBytes := formatContent(article.Content, 0)
 	result += content
-	return result
+	return result, saveImageBytes
 }
 
 // FormatAndSave fomat article and save to local file
 func FormatAndSave(article parse.Article, filePath string) error {
-	var result string = Format(article)
-	return ioutil.WriteFile(filePath, []byte(result), 0644)
+	// basrPath := filepath.Join(filePath, )
+	var basePath string
+	var fileName string
+	var isWin bool = runtime.GOOS == "windows"
+	var separator string
+	if isWin {
+		separator = "\\"
+	} else {
+		separator = "/"
+	}
+	if filePath == "" {
+		filePath = "." + separator
+	}
+	if strings.HasPrefix(filePath, "./") || strings.HasPrefix(filePath, ".\\") {
+		wd, _ := os.Getwd()
+		filePath = strings.Replace(filePath, ".", wd, 1)
+	}
+	if strings.HasSuffix(filePath, ".md") {
+		// basePath = filePath[:len(filePath)-len(".md")]
+		basePath = filePath[:strings.LastIndex(filePath, separator)]
+		fileName = filePath
+	} else {
+		title := strings.TrimSpace(article.Title.Val.(string))
+		// title := "thisistitle"
+		basePath = filepath.Join(filePath, title)
+		fileName = filepath.Join(basePath, title+".md")
+	}
+
+	// make basePath dir if not exists
+	if _, err := os.Stat(basePath); err != nil {
+		if err := os.MkdirAll(basePath, 0644); err != nil {
+			panic(err)
+		}
+	}
+
+	var saveImageBytes map[string][]byte
+	result, saveImageBytes := Format(article)
+	if len(saveImageBytes) > 0 {
+		for imgTitle := range saveImageBytes {
+			// save to local
+			imgfileName := filepath.Join(basePath, imgTitle)
+			/* if err := ioutil.WriteFile(imgfileName, saveImageBytes[imgTitle], 0644); err != nil {
+				log.Fatalf("can not save image file: %s\n err: %v", imgfileName, err)
+				continue
+			} */
+			f, err := os.Create(imgfileName)
+			if err != nil {
+				// log.Fatalf("can not save image file: %s", imgTitle)
+				log.Fatalf("can not save image file: %s\n err: %v", imgfileName, err)
+				continue
+			}
+			defer f.Close()
+			buf := new(bytes.Buffer)
+			binary.Write(buf, binary.LittleEndian, saveImageBytes[imgTitle])
+			f.Write(buf.Bytes())
+		}
+	}
+	return ioutil.WriteFile(fileName, []byte(result), 0644)
 }
 
 func formatTitle(piece parse.Piece) string {
@@ -45,11 +109,13 @@ func formatTags(tags string) string {
 	return tags + "  \n" // TODO
 }
 
-func formatContent(pieces []parse.Piece, depth int) string {
+func formatContent(pieces []parse.Piece, depth int) (string, map[string][]byte) {
 	var contentMdStr string
 	var base64Imgs []string
+	var saveImageBytes map[string][]byte = make(map[string][]byte)
 	for _, piece := range pieces {
 		var pieceMdStr string
+		var patchSaveImageBytes map[string][]byte
 		switch piece.Type {
 		case parse.HEADER:
 			pieceMdStr = formatTitle(piece)
@@ -64,6 +130,17 @@ func formatContent(pieces []parse.Piece, depth int) string {
 		case parse.BOLD_ITALIC_TEXT:
 			pieceMdStr = "***" + piece.Val.(string) + "***"
 		case parse.IMAGE:
+			if piece.Val == nil {
+				pieceMdStr = formatImageInline(piece)
+			} else {
+				// will save to local
+				src := piece.Attrs["src"]
+				imgExt := util.ParseImageExtFromSrc(src)
+				var hashName string = util.MD5(piece.Val.([]byte)) + "." + imgExt
+				saveImageBytes[hashName] = piece.Val.([]byte)
+				pieceMdStr = formatImageFileReferInline(piece.Attrs["alt"], hashName)
+			}
+		case parse.IMAGE_BASE64:
 			pieceMdStr = formatImageRefer(piece, len(base64Imgs))
 			base64Imgs = append(base64Imgs, piece.Val.(string))
 		case parse.TABLE:
@@ -73,36 +150,38 @@ func formatContent(pieces []parse.Piece, depth int) string {
 		case parse.CODE_BLOCK:
 			pieceMdStr = formatCodeBlock(piece)
 		case parse.BLOCK_QUOTES:
-			pieceMdStr = formatBlockQuote(piece, depth)
+			pieceMdStr, patchSaveImageBytes = formatBlockQuote(piece, depth)
 		case parse.O_LIST:
-			pieceMdStr = formatList(piece, depth)
+			pieceMdStr, patchSaveImageBytes = formatList(piece, depth)
 		case parse.U_LIST:
-			pieceMdStr = formatList(piece, depth)
+			pieceMdStr, patchSaveImageBytes = formatList(piece, depth)
 		case parse.HR:
 			// TODO
 		case parse.BR:
 			pieceMdStr = "  \n"
 		}
 		contentMdStr += pieceMdStr
+		util.MergeMap(saveImageBytes, patchSaveImageBytes)
 	}
 	for i := 0; i < len(base64Imgs); i++ {
 		contentMdStr += "\n[" + strconv.Itoa(i) + "]:" + "data:image/png;base64," + base64Imgs[i]
 	}
-	return contentMdStr
+	return contentMdStr, saveImageBytes
 }
 
-func formatBlockQuote(piece parse.Piece, depth int) string {
+func formatBlockQuote(piece parse.Piece, depth int) (string, map[string][]byte) {
 	var bqMdString string
 	var prefix string = ">"
 	for i := 0; i < depth; i++ {
 		prefix += ">"
 	}
 	prefix += " "
-	bqMdString = prefix + formatContent(piece.Val.([]parse.Piece), depth+1) + "  \n"
-	return bqMdString
+	var saveImageBytes map[string][]byte
+	bqMdString, saveImageBytes = formatContent(piece.Val.([]parse.Piece), depth+1)
+	return prefix + bqMdString + "  \n", saveImageBytes
 }
 
-func formatList(li parse.Piece, depth int) string {
+func formatList(li parse.Piece, depth int) (string, map[string][]byte) {
 	var listMdString string
 	var prefix string
 	for j := 0; j < depth; j++ {
@@ -113,8 +192,9 @@ func formatList(li parse.Piece, depth int) string {
 	} else if li.Type == parse.O_LIST {
 		prefix += strconv.Itoa(1) + ". " // 写死成1也大丈夫，markdown会自动累加序号
 	}
-	listMdString = prefix + formatContent(li.Val.([]parse.Piece), depth+1) + "  \n"
-	return listMdString
+	var saveImageBytes map[string][]byte
+	listMdString, saveImageBytes = formatContent(li.Val.([]parse.Piece), depth+1)
+	return prefix + listMdString + "  \n", saveImageBytes
 }
 
 func formatCodeBlock(piece parse.Piece) string {
@@ -128,11 +208,22 @@ func formatCodeBlock(piece parse.Piece) string {
 	return codeMdStr
 }
 
-func formatImageInline(piece parse.Piece, index int) string {
-	// return "![" + piece.Attrs["alt"] + "](" + piece.Attrs["src"] + " \"" + piece.Attrs["title"] + "\")"
+// 图片地址为本身src
+func formatImageInline(piece parse.Piece) string {
+	return "![" + piece.Attrs["alt"] + "](" + piece.Attrs["src"] + " \"" + piece.Attrs["title"] + "\")"
+}
+
+// 图片地址为本地引用
+func formatImageFileReferInline(alt string, refName string) string {
+	return "![" + alt + "](" + refName + ")"
+}
+
+// 图片转成base64并插在原地
+func formatImageBase64Inline(piece parse.Piece) string {
 	return "![" + piece.Attrs["alt"] + "](data:image/png;base64," + piece.Val.(string) + ")"
 }
 
+// 图片地址为markdown内引用（用于base64）
 func formatImageRefer(piece parse.Piece, index int) string {
 	return "![" + piece.Attrs["alt"] + "][" + strconv.Itoa(index) + "]"
 }

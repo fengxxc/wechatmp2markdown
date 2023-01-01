@@ -9,12 +9,12 @@ import (
 )
 
 func Test1() {
-	var articleStruct parse.Article = parse.ParseFromHTMLFile("./test/test1.html")
+	var articleStruct parse.Article = parse.ParseFromHTMLFile("./test/test1.html", parse.IMAGE_POLICY_BASE64)
 	fmt.Println("-------------------test1.html parse-------------------")
 	fmt.Printf("%+v\n", articleStruct)
 
 	fmt.Println("-------------------test1.html format-------------------")
-	var mdString string = format.Format(articleStruct)
+	mdString, _ := format.Format(articleStruct)
 	fmt.Print(mdString)
 	ioutil.WriteFile("./test/test1_target.md", []byte(mdString), 0644)
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/fengxxc/wechatmp2markdown/format"
 	"github.com/fengxxc/wechatmp2markdown/parse"
@@ -29,10 +30,35 @@ func main() {
 		return
 	}
 
+	// --image=base64 	-ib 保存图片，base64格式，在md文件中（默认为此选项）
+	// --image=url 		-iu 只保留图片链接
+	// --image=save 	-is 保存图片，最终输出到文件夹
+	// --save=zip -sz 		最终打包输出到zip
+	imageArgValue := "base64"
+	if args[3] != "" {
+		if strings.HasPrefix(args[3], "--image=") {
+			imageArgValue = args[3][len("--image="):]
+		} else if strings.HasPrefix(args[3], "-i") {
+			imageArgVal := args[3][len("-i"):]
+			switch imageArgVal {
+			case "u":
+				imageArgValue = "url"
+			case "s":
+				imageArgValue = "save"
+			case "b":
+				fallthrough
+			default:
+				imageArgValue = "base64"
+			}
+		}
+	}
+
+	var imagePolicy parse.ImagePolicy = parse.ImageArgValue2ImagePolicy(imageArgValue)
+
 	// cli pattern
 	url := args1
 	filename := args2
 	fmt.Printf("url: %s, filename: %s\n", url, filename)
-	var articleStruct parse.Article = parse.ParseFromURL(url)
+	var articleStruct parse.Article = parse.ParseFromURL(url, imagePolicy)
 	format.FormatAndSave(articleStruct, filename)
 }

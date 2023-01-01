@@ -16,7 +16,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-func parseSection(s *goquery.Selection) []Piece {
+func parseSection(s *goquery.Selection, imagePolicy ImagePolicy) []Piece {
 	var pieces []Piece
 	pieces = append(pieces, Piece{BR, nil, nil})
 	s.Contents().Each(func(i int, sc *goquery.Selection) {
@@ -28,21 +28,31 @@ func parseSection(s *goquery.Selection) []Piece {
 			attr["src"], _ = sc.Attr("data-src")
 			attr["alt"], _ = sc.Attr("alt")
 			attr["title"], _ = sc.Attr("title")
-			base64Image := img2base64(fetchImgFile(attr["src"]))
-			pieces = append(pieces, Piece{IMAGE, base64Image, attr}, Piece{BR, nil, nil})
+			switch imagePolicy {
+			case IMAGE_POLICY_URL:
+				pieces = append(pieces, Piece{IMAGE, nil, attr}, Piece{BR, nil, nil})
+			case IMAGE_POLICY_SAVE:
+				image := fetchImgFile(attr["src"])
+				pieces = append(pieces, Piece{IMAGE, image, attr}, Piece{BR, nil, nil})
+			case IMAGE_POLICY_BASE64:
+				fallthrough
+			default:
+				base64Image := img2base64(fetchImgFile(attr["src"]))
+				pieces = append(pieces, Piece{IMAGE_BASE64, base64Image, attr}, Piece{BR, nil, nil})
+			}
 		} else if sc.Is("ol") {
-			pieces = append(pieces, parseList(sc, O_LIST)...)
+			pieces = append(pieces, parseList(sc, O_LIST, imagePolicy)...)
 		} else if sc.Is("ul") {
-			pieces = append(pieces, parseList(sc, U_LIST)...)
+			pieces = append(pieces, parseList(sc, U_LIST, imagePolicy)...)
 		} else if sc.Is("pre") || sc.Is("section.code-snippet__fix") {
 			// 代码块
 			pieces = append(pieces, parsePre(sc)...)
 		} else if sc.Is("p") || sc.Is("section") || sc.Is("span") {
-			pieces = append(pieces, parseSection(sc)...)
+			pieces = append(pieces, parseSection(sc, imagePolicy)...)
 		} else if sc.Is("h1") || sc.Is("h2") || sc.Is("h3") || sc.Is("h4") || sc.Is("h5") || sc.Is("h6") {
 			pieces = append(pieces, parseHeader(sc)...)
 		} else if sc.Is("blockquote") {
-			pieces = append(pieces, parseBlockQuote(sc)...)
+			pieces = append(pieces, parseBlockQuote(sc, imagePolicy)...)
 		} else if sc.Is("strong") {
 			pieces = append(pieces, parseStrong(sc)...)
 		} else {
@@ -83,19 +93,19 @@ func parsePre(s *goquery.Selection) []Piece {
 	return []Piece{p, {BR, nil, nil}}
 }
 
-func parseList(s *goquery.Selection, ptype PieceType) []Piece {
+func parseList(s *goquery.Selection, ptype PieceType, imagePolicy ImagePolicy) []Piece {
 	var list []Piece
 	s.Find("li").Each(func(i int, sc *goquery.Selection) {
-		list = append(list, Piece{ptype, parseSection(sc), nil})
+		list = append(list, Piece{ptype, parseSection(sc, imagePolicy), nil})
 	})
 	list = append(list, Piece{BR, nil, nil})
 	return list
 }
 
-func parseBlockQuote(s *goquery.Selection) []Piece {
+func parseBlockQuote(s *goquery.Selection, imagePolicy ImagePolicy) []Piece {
 	var bq []Piece
 	s.Contents().Each(func(i int, sc *goquery.Selection) {
-		bq = append(bq, Piece{BLOCK_QUOTES, parseSection(sc), nil})
+		bq = append(bq, Piece{BLOCK_QUOTES, parseSection(sc, imagePolicy), nil})
 	})
 	bq = append(bq, Piece{BR, nil, nil})
 	return bq
@@ -124,7 +134,7 @@ func parseMeta(s *goquery.Selection) []string {
 	return res
 }
 
-func ParseFromReader(r io.Reader) Article {
+func ParseFromReader(r io.Reader, imagePolicy ImagePolicy) Article {
 	var article Article
 	doc, err := goquery.NewDocumentFromReader(r)
 	if err != nil {
@@ -144,11 +154,10 @@ func ParseFromReader(r io.Reader) Article {
 	// 从js中找到发布时间
 	re, _ := regexp.Compile("var ct = \"([0-9]+)\"")
 	findstrs := re.FindStringSubmatch(doc.Find("script").Text())
-	if findstrs != nil && len(findstrs) > 1 {
+	if len(findstrs) > 1 {
 		var createTime string = findstrs[1]
 		timestamp, _ := strconv.Atoi(createTime)
 		time := time.Unix(int64(timestamp), 0)
-		// fmt.Println(time)
 		article.Meta = append(article.Meta, time.Format("2006-01-02 15:04"))
 	}
 
@@ -162,17 +171,17 @@ func ParseFromReader(r io.Reader) Article {
 	// p[style="line-height: 1.5em;"]				=> 项目列表（有序/无序）
 	// section[style=".*text-align:center"]>img		=> 居中段落（图片）
 	content := mainContent.Find("#js_content")
-	pieces := parseSection(content)
+	pieces := parseSection(content, imagePolicy)
 	article.Content = pieces
 
 	return article
 }
 
-func ParseFromHTMLString(s string) Article {
-	return ParseFromReader(strings.NewReader(s))
+func ParseFromHTMLString(s string, imagePolicy ImagePolicy) Article {
+	return ParseFromReader(strings.NewReader(s), imagePolicy)
 }
 
-func ParseFromHTMLFile(filepath string) Article {
+func ParseFromHTMLFile(filepath string, imagePolicy ImagePolicy) Article {
 	file, err := os.Open(filepath)
 	if err != nil {
 		panic(err)
@@ -182,10 +191,10 @@ func ParseFromHTMLFile(filepath string) Article {
 	if err2 != nil {
 		panic(err)
 	}
-	return ParseFromReader(bytes.NewReader(content))
+	return ParseFromReader(bytes.NewReader(content), imagePolicy)
 }
 
-func ParseFromURL(url string) Article {
+func ParseFromURL(url string, imagePolicy ImagePolicy) Article {
 	res, err := http.Get(url)
 	if err != nil {
 		panic(err)
@@ -194,7 +203,7 @@ func ParseFromURL(url string) Article {
 	if res.StatusCode != 200 {
 		log.Fatalf("get from url %s error: %d %s", url, res.StatusCode, res.Status)
 	}
-	return ParseFromReader(res.Body)
+	return ParseFromReader(res.Body, imagePolicy)
 }
 
 func removeBrAndBlank(s string) string {
@@ -229,4 +238,27 @@ func fetchImgFile(url string) []byte {
 
 func img2base64(content []byte) string {
 	return base64.StdEncoding.EncodeToString(content)
+}
+
+type ImagePolicy int32
+
+const (
+	IMAGE_POLICY_URL ImagePolicy = iota
+	IMAGE_POLICY_SAVE
+	IMAGE_POLICY_BASE64
+)
+
+func ImageArgValue2ImagePolicy(val string) ImagePolicy {
+	var imagePolicy ImagePolicy
+	switch val {
+	case "url":
+		imagePolicy = IMAGE_POLICY_URL
+	case "save":
+		imagePolicy = IMAGE_POLICY_SAVE
+	case "base64":
+		fallthrough
+	default:
+		imagePolicy = IMAGE_POLICY_BASE64
+	}
+	return imagePolicy
 }
