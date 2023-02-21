@@ -41,6 +41,7 @@ markdown和图片文件将保存在 `D:\wechatmp_bak\2022年度总结\` 下
 将返回一个zip文件
 
 ## 开发
+go 1.20
 ### 编译
 #### Linux or Mac 环境
 ```

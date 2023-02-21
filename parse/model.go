@@ -12,8 +12,7 @@ type Header struct {
 	Text  string
 }
 
-// go不资瓷泛型可真是难受...
-type Value interface{}
+type Value any
 
 type Piece struct {
 	Type  PieceType

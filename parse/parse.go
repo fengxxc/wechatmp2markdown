@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -187,7 +186,7 @@ func ParseFromHTMLFile(filepath string, imagePolicy ImagePolicy) Article {
 		panic(err)
 	}
 	defer file.Close()
-	content, err2 := ioutil.ReadAll(file)
+	content, err2 := io.ReadAll(file)
 	if err2 != nil {
 		panic(err)
 	}
@@ -229,7 +228,7 @@ func fetchImgFile(url string) []byte {
 	if res.StatusCode != 200 {
 		log.Fatalf("get Image from url %s error: %d %s", url, res.StatusCode, res.Status)
 	}
-	content, err := ioutil.ReadAll(res.Body)
+	content, err := io.ReadAll(res.Body)
 	if err != nil {
 		log.Fatalf("read image Response error: %s", err.Error())
 	}
