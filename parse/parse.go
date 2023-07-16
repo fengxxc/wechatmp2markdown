@@ -196,7 +196,7 @@ func ParseFromHTMLFile(filepath string, imagePolicy ImagePolicy) Article {
 func ParseFromURL(url string, imagePolicy ImagePolicy) Article {
 	res, err := http.Get(url)
 	if err != nil {
-		panic(err)
+		log.Fatalf(err.Error())
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {

@@ -35,7 +35,7 @@ func main() {
 	// --image=save 	-is 保存图片，最终输出到文件夹
 	// --save=zip -sz 		最终打包输出到zip
 	imageArgValue := "base64"
-	if args[3] != "" {
+	if len(args) > 3 && args[3] != "" {
 		if strings.HasPrefix(args[3], "--image=") {
 			imageArgValue = args[3][len("--image="):]
 		} else if strings.HasPrefix(args[3], "-i") {
