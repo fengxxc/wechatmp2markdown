@@ -3,10 +3,10 @@ package format
 import (
 	"bytes"
 	"encoding/binary"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -28,6 +28,33 @@ func Format(article parse.Article) (string, map[string][]byte) {
 	content, saveImageBytes := formatContent(article.Content, 0)
 	result += content
 	return result, saveImageBytes
+}
+
+// windows下, 文件名包含非法字符时, 用相似的Unicode字符进行替换; 长度超过255个字符时，保留前255个字符
+func legalizationFilenameForWindows(name string) string {
+	// Windows文件名不能包含这些字符
+	invalidChars := regexp.MustCompile(`[\\/:*?\"<>|]`)
+
+	// 如果包含非法字符,则替换
+	if invalidChars.MatchString(name) {
+		name = strings.ReplaceAll(name, "<", "≺")
+		name = strings.ReplaceAll(name, ">", "≻")
+		name = strings.ReplaceAll(name, ":", ":")
+		name = strings.ReplaceAll(name, "\"", "“")
+		name = strings.ReplaceAll(name, "/", "∕")
+		name = strings.ReplaceAll(name, "\\", "∖")
+		name = strings.ReplaceAll(name, "|", "∣")
+		name = strings.ReplaceAll(name, "?", "?")
+		name = strings.ReplaceAll(name, "*", "⁎")
+	}
+
+	// 文件名最大长度255字符
+	if len(name) > 255 {
+		// 超出就截断文件名
+		name = name[:255]
+	}
+
+	return name
 }
 
 // FormatAndSave fomat article and save to local file
@@ -55,6 +82,9 @@ func FormatAndSave(article parse.Article, filePath string) error {
 		fileName = filePath
 	} else {
 		title := strings.TrimSpace(article.Title.Val.(string))
+		if isWin {
+			title = legalizationFilenameForWindows(title)
+		}
 		// title := "thisistitle"
 		basePath = filepath.Join(filePath, title)
 		fileName = filepath.Join(basePath, title+".md")
@@ -89,7 +119,7 @@ func FormatAndSave(article parse.Article, filePath string) error {
 			f.Write(buf.Bytes())
 		}
 	}
-	return ioutil.WriteFile(fileName, []byte(result), 0644)
+	return os.WriteFile(fileName, []byte(result), 0644)
 }
 
 func formatTitle(piece parse.Piece) string {
