@@ -174,7 +174,7 @@ func formatContent(pieces []parse.Piece, depth int) (string, map[string][]byte) 
 			pieceMdStr = formatImageRefer(piece, len(base64Imgs))
 			base64Imgs = append(base64Imgs, piece.Val.(string))
 		case parse.TABLE:
-			// TODO
+			pieceMdStr = formatTable(piece)
 		case parse.CODE_INLINE:
 			// TODO
 		case parse.CODE_BLOCK:
@@ -199,6 +199,15 @@ func formatContent(pieces []parse.Piece, depth int) (string, map[string][]byte) 
 		contentMdStr += "\n[" + strconv.Itoa(i) + "]:" + "data:image/png;base64," + base64Imgs[i]
 	}
 	return contentMdStr, saveImageBytes
+}
+
+func formatTable(piece parse.Piece) string {
+	var tableMdStr string
+	if piece.Attrs != nil && piece.Attrs["type"] == "native" {
+		tableMdStr = piece.Val.(string)
+	}
+	// TODO
+	return tableMdStr
 }
 
 func formatBlockQuote(piece parse.Piece, depth int) (string, map[string][]byte) {

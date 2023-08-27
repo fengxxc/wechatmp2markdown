@@ -87,7 +87,7 @@ mingw32-make win-build-win32
 编译好的文件在`./build`目录下
 
 ## TODO
-- [ ] 支持解析表格元素(table tag)
+- [x] 支持解析表格元素(table tag)
 
 ## 最后
 抓紧时间窗口。努力记录。黑暗中记得光的模样。

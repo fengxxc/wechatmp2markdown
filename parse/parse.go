@@ -64,6 +64,8 @@ func parseSection(s *goquery.Selection, imagePolicy ImagePolicy, lastPieceType P
 			pieces = append(pieces, parseBlockQuote(sc, imagePolicy)...)
 		} else if sc.Is("strong") {
 			pieces = append(pieces, parseStrong(sc)...)
+		} else if sc.Is("table") {
+			pieces = append(pieces, parseTable(sc)...)
 		} else {
 			if sc.Text() != "" {
 				pieces = append(pieces, Piece{NORMAL_TEXT, sc.Text(), nil})
@@ -121,6 +123,14 @@ func parseBlockQuote(s *goquery.Selection, imagePolicy ImagePolicy) []Piece {
 	})
 	bq = append(bq, Piece{BR, nil, nil})
 	return bq
+}
+
+func parseTable(s *goquery.Selection) []Piece {
+	// 先简单粗暴把原生的挪过去
+	var table []Piece
+	html, _ := s.Html()
+	table = append(table, Piece{TABLE, "<table>" + html + "</table>", map[string]string{"type": "native"}})
+	return table
 }
 
 func parseStrong(s *goquery.Selection) []Piece {
