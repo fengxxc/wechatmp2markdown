@@ -1,10 +1,41 @@
 package parse
 
+import (
+	"strconv"
+	"strings"
+)
+
 type Article struct {
 	Title   Piece
 	Meta    []string
 	Tags    string
 	Content []Piece
+}
+
+func (article Article) ToString() string {
+	return ToString(article.Content)
+}
+
+func ToString(pieces []Piece) string {
+	var res []string
+	for _, p := range pieces {
+		var val = "[null]"
+
+		switch p.Val.(type) {
+		case string:
+			val = p.Val.(string)
+			if len(val) > 90 {
+				val = val[:90]
+			}
+			res = append(res, "type: "+strconv.Itoa(int(p.Type))+", value: "+val+"\n")
+		case []Piece:
+			res = append(res, ToString(p.Val.([]Piece)))
+		default:
+			res = append(res, "type: "+strconv.Itoa(int(p.Type))+", value: "+val+"\n")
+		}
+		// fmt.Printf("%+v %+v\n", p.Type, val)
+	}
+	return strings.Join(res, "")
 }
 
 type Header struct {
@@ -39,4 +70,5 @@ const (
 	U_LIST                            // 13 无序列表
 	HR                                // 14 分隔线
 	BR                                // 15 换行
+	NULL                              // 无
 )

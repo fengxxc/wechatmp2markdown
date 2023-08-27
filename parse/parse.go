@@ -15,9 +15,14 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-func parseSection(s *goquery.Selection, imagePolicy ImagePolicy) []Piece {
+func parseSection(s *goquery.Selection, imagePolicy ImagePolicy, lastPieceType PieceType) []Piece {
 	var pieces []Piece
-	pieces = append(pieces, Piece{BR, nil, nil})
+	if lastPieceType == O_LIST || lastPieceType == U_LIST || lastPieceType == NULL || lastPieceType == BLOCK_QUOTES {
+		// pieces = append(pieces, Piece{NULL, nil, nil})
+	} else {
+		pieces = append(pieces, Piece{BR, nil, nil})
+	}
+	var _lastPieceType PieceType = NULL
 	s.Contents().Each(func(i int, sc *goquery.Selection) {
 		attr := make(map[string]string)
 		if sc.Is("a") {
@@ -29,15 +34,15 @@ func parseSection(s *goquery.Selection, imagePolicy ImagePolicy) []Piece {
 			attr["title"], _ = sc.Attr("title")
 			switch imagePolicy {
 			case IMAGE_POLICY_URL:
-				pieces = append(pieces, Piece{IMAGE, nil, attr}, Piece{BR, nil, nil})
+				pieces = append(pieces, Piece{IMAGE, nil, attr})
 			case IMAGE_POLICY_SAVE:
 				image := fetchImgFile(attr["src"])
-				pieces = append(pieces, Piece{IMAGE, image, attr}, Piece{BR, nil, nil})
+				pieces = append(pieces, Piece{IMAGE, image, attr})
 			case IMAGE_POLICY_BASE64:
 				fallthrough
 			default:
 				base64Image := img2base64(fetchImgFile(attr["src"]))
-				pieces = append(pieces, Piece{IMAGE_BASE64, base64Image, attr}, Piece{BR, nil, nil})
+				pieces = append(pieces, Piece{IMAGE_BASE64, base64Image, attr})
 			}
 		} else if sc.Is("ol") {
 			pieces = append(pieces, parseList(sc, O_LIST, imagePolicy)...)
@@ -46,8 +51,13 @@ func parseSection(s *goquery.Selection, imagePolicy ImagePolicy) []Piece {
 		} else if sc.Is("pre") || sc.Is("section.code-snippet__fix") {
 			// 代码块
 			pieces = append(pieces, parsePre(sc)...)
-		} else if sc.Is("p") || sc.Is("section") || sc.Is("span") {
-			pieces = append(pieces, parseSection(sc, imagePolicy)...)
+		} else if sc.Is("span") {
+			pieces = append(pieces, parseSection(sc, imagePolicy, _lastPieceType)...)
+		} else if sc.Is("p") || sc.Is("section") {
+			pieces = append(pieces, parseSection(sc, imagePolicy, _lastPieceType)...)
+			if removeBrAndBlank(sc.Text()) != "" && len(pieces) > 0 && pieces[len(pieces)-1].Type != BR {
+				pieces = append(pieces, Piece{BR, nil, nil})
+			}
 		} else if sc.Is("h1") || sc.Is("h2") || sc.Is("h3") || sc.Is("h4") || sc.Is("h5") || sc.Is("h6") {
 			pieces = append(pieces, parseHeader(sc)...)
 		} else if sc.Is("blockquote") {
@@ -55,10 +65,14 @@ func parseSection(s *goquery.Selection, imagePolicy ImagePolicy) []Piece {
 		} else if sc.Is("strong") {
 			pieces = append(pieces, parseStrong(sc)...)
 		} else {
-			pieces = append(pieces, Piece{NORMAL_TEXT, sc.Text(), nil})
+			if sc.Text() != "" {
+				pieces = append(pieces, Piece{NORMAL_TEXT, sc.Text(), nil})
+			}
+		}
+		if len(pieces) > 0 {
+			_lastPieceType = pieces[len(pieces)-1].Type
 		}
 	})
-	pieces = append(pieces, Piece{BR, nil, nil})
 	return pieces
 }
 
@@ -80,7 +94,7 @@ func parseHeader(s *goquery.Selection) []Piece {
 	}
 	attr := map[string]string{"level": strconv.Itoa(level)}
 	p := Piece{HEADER, removeBrAndBlank(s.Text()), attr}
-	return []Piece{p, {BR, nil, nil}}
+	return []Piece{p}
 }
 
 func parsePre(s *goquery.Selection) []Piece {
@@ -89,22 +103,21 @@ func parsePre(s *goquery.Selection) []Piece {
 		codeRows = append(codeRows, sc.Text())
 	})
 	p := Piece{CODE_BLOCK, codeRows, nil}
-	return []Piece{p, {BR, nil, nil}}
+	return []Piece{p}
 }
 
 func parseList(s *goquery.Selection, ptype PieceType, imagePolicy ImagePolicy) []Piece {
 	var list []Piece
 	s.Find("li").Each(func(i int, sc *goquery.Selection) {
-		list = append(list, Piece{ptype, parseSection(sc, imagePolicy), nil})
+		list = append(list, Piece{ptype, parseSection(sc, imagePolicy, ptype), nil})
 	})
-	list = append(list, Piece{BR, nil, nil})
 	return list
 }
 
 func parseBlockQuote(s *goquery.Selection, imagePolicy ImagePolicy) []Piece {
 	var bq []Piece
 	s.Contents().Each(func(i int, sc *goquery.Selection) {
-		bq = append(bq, Piece{BLOCK_QUOTES, parseSection(sc, imagePolicy), nil})
+		bq = append(bq, Piece{BLOCK_QUOTES, parseSection(sc, imagePolicy, BLOCK_QUOTES), nil})
 	})
 	bq = append(bq, Piece{BR, nil, nil})
 	return bq
@@ -170,7 +183,7 @@ func ParseFromReader(r io.Reader, imagePolicy ImagePolicy) Article {
 	// p[style="line-height: 1.5em;"]				=> 项目列表（有序/无序）
 	// section[style=".*text-align:center"]>img		=> 居中段落（图片）
 	content := mainContent.Find("#js_content")
-	pieces := parseSection(content, imagePolicy)
+	pieces := parseSection(content, imagePolicy, NULL)
 	article.Content = pieces
 
 	return article

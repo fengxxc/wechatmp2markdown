@@ -189,6 +189,8 @@ func formatContent(pieces []parse.Piece, depth int) (string, map[string][]byte) 
 			// TODO
 		case parse.BR:
 			pieceMdStr = "  \n"
+		case parse.NULL:
+			continue
 		}
 		contentMdStr += pieceMdStr
 		util.MergeMap(saveImageBytes, patchSaveImageBytes)
@@ -240,25 +242,25 @@ func formatCodeBlock(piece parse.Piece) string {
 
 // 图片地址为本身src
 func formatImageInline(piece parse.Piece) string {
-	return "![" + piece.Attrs["alt"] + "](" + piece.Attrs["src"] + " \"" + piece.Attrs["title"] + "\")"
+	return "![" + piece.Attrs["alt"] + "](" + piece.Attrs["src"] + " \"" + piece.Attrs["title"] + "\")  \n"
 }
 
 // 图片地址为本地引用
 func formatImageFileReferInline(alt string, refName string) string {
-	return "![" + alt + "](" + refName + ")"
+	return "![" + alt + "](" + refName + ")  \n"
 }
 
 // 图片转成base64并插在原地
 func formatImageBase64Inline(piece parse.Piece) string {
-	return "![" + piece.Attrs["alt"] + "](data:image/png;base64," + piece.Val.(string) + ")"
+	return "![" + piece.Attrs["alt"] + "](data:image/png;base64," + piece.Val.(string) + ")  \n"
 }
 
 // 图片地址为markdown内引用（用于base64）
 func formatImageRefer(piece parse.Piece, index int) string {
-	return "![" + piece.Attrs["alt"] + "][" + strconv.Itoa(index) + "]"
+	return "![" + piece.Attrs["alt"] + "][" + strconv.Itoa(index) + "]  \n"
 }
 
 func formatLink(piece parse.Piece) string {
-	var linkMdStr string = "[" + piece.Val.(string) + "](" + piece.Attrs["href"] + ")"
+	var linkMdStr string = "[" + piece.Val.(string) + "](" + piece.Attrs["href"] + ")  \n"
 	return linkMdStr
 }
