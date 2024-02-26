@@ -92,7 +92,7 @@ func FormatAndSave(article parse.Article, filePath string) error {
 
 	// make basePath dir if not exists
 	if _, err := os.Stat(basePath); err != nil {
-		if err := os.MkdirAll(basePath, 0644); err != nil {
+		if err := os.MkdirAll(basePath, 0755); err != nil {
 			panic(err)
 		}
 	}
