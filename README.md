@@ -33,6 +33,8 @@ markdown和图片文件将保存在 `D:\wechatmp_bak\2022年度总结\` 下
 > "*" -> "⁎"
 > ```
 
+> 在linux环境下，使用CLI模式，需要为程序赋予可执行与写权限，例如：` chmod +xw wechatmp2markdown-v1.1.6_linux_amd64`
+
 ### web server 模式
 通过web服务使用
 
@@ -52,6 +54,8 @@ markdown和图片文件将保存在 `D:\wechatmp_bak\2022年度总结\` 下
 
 浏览器访问：`localhost:8080?url=https://mp.weixin.qq.com/s/a=1&b=2&image=save`，
 将返回一个zip文件
+
+> 在linux环境下，使用web server模式，需要为程序赋予可执行权限，例如：` chmod +x wechatmp2markdown-v1.1.6_linux_amd64`
 
 ## 开发
 go 1.20
