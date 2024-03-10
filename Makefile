@@ -8,6 +8,8 @@ build-linux: clean
 	${BUILD_ENV} GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o build/${APP}-${VERSION}_linux_amd64 main.go
 build-osx: clean
 	${BUILD_ENV} GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w" -o build/${APP}-${VERSION}_osx_amd64 main.go
+build-osx-arm64: clean
+	${BUILD_ENV} GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w" -o build/${APP}-${VERSION}_osx_amd64 main.go
 build-win64: clean
 	${BUILD_ENV} GOOS=windows GOARCH=amd64 go build -ldflags "-s -w" -o build/${APP}-${VERSION}_win64.exe main.go
 build-win32: clean
