@@ -100,9 +100,19 @@ func parseHeader(s *goquery.Selection) []Piece {
 }
 
 func parsePre(s *goquery.Selection) []Piece {
+	// print(s.Html())
 	var codeRows []string
 	s.Find("code").Each(func(i int, sc *goquery.Selection) {
-		codeRows = append(codeRows, sc.Text())
+		var codeLine string = ""
+		sc.Contents().Each(func(i int, sc *goquery.Selection) {
+			if goquery.NodeName(sc) == "br" {
+				codeRows = append(codeRows, codeLine)
+				codeLine = ""
+			} else {
+				codeLine += sc.Text()
+			}
+		})
+		codeRows = append(codeRows, codeLine)
 	})
 	p := Piece{CODE_BLOCK, codeRows, nil}
 	return []Piece{p}
