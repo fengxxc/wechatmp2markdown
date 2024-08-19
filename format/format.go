@@ -39,7 +39,7 @@ func legalizationFilenameForWindows(name string) string {
 	if invalidChars.MatchString(name) {
 		name = strings.ReplaceAll(name, "<", "≺")
 		name = strings.ReplaceAll(name, ">", "≻")
-		name = strings.ReplaceAll(name, ":", ":")
+		name = strings.ReplaceAll(name, ":", "∶")
 		name = strings.ReplaceAll(name, "\"", "“")
 		name = strings.ReplaceAll(name, "/", "∕")
 		name = strings.ReplaceAll(name, "\\", "∖")

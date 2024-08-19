@@ -1,6 +1,6 @@
 BUILD_ENV := CGO_ENABLED=0
 APP=wechatmp2markdown
-VERSION=v1.1.7
+VERSION=v1.1.8
 
 # linux or mac 环境编译
 # make [cmd]
