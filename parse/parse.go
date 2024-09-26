@@ -28,8 +28,6 @@ func parseSection(s *goquery.Selection, imagePolicy ImagePolicy, lastPieceType P
 		if sc.Is("a") {
 			attr["href"], _ = sc.Attr("href")
 			pieces = append(pieces, Piece{LINK, removeBrAndBlank(sc.Text()), attr})
-		} else if sc.Is("figure") {
-			pieces = append(pieces, parseSection(sc, imagePolicy, _lastPieceType)...)
 		} else if sc.Is("img") {
 			attr["src"], _ = sc.Attr("data-src")
 			attr["alt"], _ = sc.Attr("alt")
@@ -53,7 +51,7 @@ func parseSection(s *goquery.Selection, imagePolicy ImagePolicy, lastPieceType P
 		} else if sc.Is("pre") || sc.Is("section.code-snippet__fix") {
 			// 代码块
 			pieces = append(pieces, parsePre(sc)...)
-		} else if sc.Is("span") {
+		} else if sc.Is("span") || sc.Is("figure") {
 			pieces = append(pieces, parseSection(sc, imagePolicy, _lastPieceType)...)
 		} else if sc.Is("p") || sc.Is("section") || sc.Is("figcaption") {
 			pieces = append(pieces, parseSection(sc, imagePolicy, _lastPieceType)...)
