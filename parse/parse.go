@@ -28,6 +28,8 @@ func parseSection(s *goquery.Selection, imagePolicy ImagePolicy, lastPieceType P
 		if sc.Is("a") {
 			attr["href"], _ = sc.Attr("href")
 			pieces = append(pieces, Piece{LINK, removeBrAndBlank(sc.Text()), attr})
+		} else if sc.Is("figure") {
+			pieces = append(pieces, parseSection(sc, imagePolicy, _lastPieceType)...)
 		} else if sc.Is("img") {
 			attr["src"], _ = sc.Attr("data-src")
 			attr["alt"], _ = sc.Attr("alt")
@@ -100,7 +102,7 @@ func parseHeader(s *goquery.Selection) []Piece {
 }
 
 func parsePre(s *goquery.Selection) []Piece {
-	// print(s.Html())
+	// TODO when include img...
 	var codeRows []string
 	s.Find("code").Each(func(i int, sc *goquery.Selection) {
 		var codeLine string = ""
