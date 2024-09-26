@@ -55,7 +55,7 @@ func parseSection(s *goquery.Selection, imagePolicy ImagePolicy, lastPieceType P
 			pieces = append(pieces, parsePre(sc)...)
 		} else if sc.Is("span") {
 			pieces = append(pieces, parseSection(sc, imagePolicy, _lastPieceType)...)
-		} else if sc.Is("p") || sc.Is("section") {
+		} else if sc.Is("p") || sc.Is("section") || sc.Is("figcaption") {
 			pieces = append(pieces, parseSection(sc, imagePolicy, _lastPieceType)...)
 			if removeBrAndBlank(sc.Text()) != "" && len(pieces) > 0 && pieces[len(pieces)-1].Type != BR {
 				pieces = append(pieces, Piece{BR, nil, nil})
