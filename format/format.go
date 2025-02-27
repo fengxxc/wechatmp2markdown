@@ -57,12 +57,26 @@ func legalizationFilenameForWindows(name string) string {
 	return name
 }
 
+// linux下, 文件名包含非法字符时, 用相似的Unicode字符进行替换
+func legalizationFilenameForLinux(name string) string {
+	// Linux文件名不能包含这些字符
+	invalidChars := regexp.MustCompile(`[\/]`)
+
+	// 如果包含非法字符,则替换
+	if invalidChars.MatchString(name) {
+		name = strings.ReplaceAll(name, "/", "∕")
+	}
+
+	return name
+}
+
 // FormatAndSave fomat article and save to local file
 func FormatAndSave(article parse.Article, filePath string) error {
 	// basrPath := filepath.Join(filePath, )
 	var basePath string
 	var fileName string
 	var isWin bool = runtime.GOOS == "windows"
+	var isLinux bool = runtime.GOOS == "linux"
 	var separator string
 	if isWin {
 		separator = "\\"
@@ -84,6 +98,8 @@ func FormatAndSave(article parse.Article, filePath string) error {
 		title := strings.TrimSpace(article.Title.Val.(string))
 		if isWin {
 			title = legalizationFilenameForWindows(title)
+		} else if isLinux {
+			title = legalizationFilenameForLinux(title)
 		}
 		// title := "thisistitle"
 		basePath = filepath.Join(filePath, title)

@@ -83,7 +83,11 @@ markdown和图片文件将保存在 `D:\wechatmp_bak\gitcode操你妈\` 下
 > "*" -> "⁎"
 > ```
 
-> 在linux环境下，使用CLI模式，需要为程序赋予可执行与写权限，例如：` chmod +xw wechatmp2markdown-v1.1.9_linux_amd64`
+> 在linux环境下，使用CLI模式，需要为程序赋予可执行与写权限，例如：` chmod +xw wechatmp2markdown-v1.1.10_linux_amd64`；  
+> 以及，文件或路径名不能包含以下任何字符：/（正斜杠），当标题包含以上字符时，本程序将用相似的Unicode字符进行替换，具体替换规则为：
+> ```
+> "/" -> "∕"
+> ```
 
 ### web server 模式
 通过web服务使用
@@ -105,7 +109,7 @@ markdown和图片文件将保存在 `D:\wechatmp_bak\gitcode操你妈\` 下
 浏览器访问：`localhost:8964?url=https://mp.weixin.qq.com/s/a=1&b=2&image=save`，
 将返回一个zip文件
 
-> 在linux环境下，使用web server模式，需要为程序赋予可执行权限，例如：` chmod +x wechatmp2markdown-v1.1.9_linux_amd64`
+> 在linux环境下，使用web server模式，需要为程序赋予可执行权限，例如：` chmod +x wechatmp2markdown-v1.1.10_linux_amd64`
 
 ## 开发
 go 1.20
