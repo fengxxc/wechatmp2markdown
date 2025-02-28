@@ -120,6 +120,8 @@ go 1.20
 make build-linux
 # 编译目标平台: mac
 make build-osx
+# 编译目标平台: mac Arm64 (M1 Pro)
+make build-osx-arm64
 # 编译目标平台: windows 64位
 make build-win64
 # 编译目标平台: windows 32位
