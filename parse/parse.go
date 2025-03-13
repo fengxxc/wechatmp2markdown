@@ -227,9 +227,16 @@ func ParseFromHTMLFile(filepath string, imagePolicy ImagePolicy) Article {
 }
 
 func ParseFromURL(url string, imagePolicy ImagePolicy) Article {
-	res, err := http.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
+
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatalf("new request %s error: %s", url, err.Error())
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36 Edg/133.0.0.0")
+	client := &http.Client{}
+	res, err := client.Do(req)
+	if err != nil {
+		log.Fatalf("request to url %s error: %s", url, err.Error())
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
